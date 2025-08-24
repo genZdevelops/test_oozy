@@ -3,68 +3,84 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../event_model.dart'; // We will create this file next
 
 class ApiService {
-  // IMPORTANT: Replace with your computer's IP address.
-  // Do NOT use localhost or 127.0.0.1.
-  // Your phone and computer must be on the same Wi-Fi network.
-  // To find your IP address:
-  // - Windows: Open Command Prompt and type `ipconfig`
-  // - macOS/Linux: Open Terminal and type `ifconfig` or `ip a`
-  static const String _baseUrl = 'http://192.168.1.10:8000'; // <--- CHANGE THIS
+  // IMPORTANT: Make sure this IP is correct for your network.
+  static const String _baseUrl = 'http://192.168.1.2:8000';
 
-  // Create a secure storage instance to save the token
   final _storage = const FlutterSecureStorage();
 
-  // Method to handle user login
-  // It returns true on success, false on failure.
-  Future<bool> login(String email, String password) async {
-    // Your FastAPI /token endpoint expects form data, not JSON.
-    // We create a Map to hold the email and password.
-    final body = {
-      'username': email,
-      'password': password,
-    };
+  // Helper method to get the authentication token
+  Future<String?> _getToken() async {
+    return await _storage.read(key: 'auth_token');
+  }
 
-    // The endpoint URL for login
+  // Helper method to get authenticated headers
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _getToken();
+    return {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  // Login method (your existing code)
+  Future<bool> login(String email, String password) async {
+    final body = {'username': email, 'password': password};
     final url = Uri.parse('$_baseUrl/token');
 
     try {
-      // We make a POST request with the form data in the body.
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: body,
       );
 
-      // Check if the request was successful (status code 200)
       if (response.statusCode == 200) {
-        // Decode the JSON response from the server
         final data = json.decode(response.body);
         final String? token = data['access_token'];
-
         if (token != null) {
-          // If we get a token, save it securely
           await _storage.write(key: 'auth_token', value: token);
           print('Login successful, token saved!');
-          return true; // Indicate success
+          return true;
         }
-        return false; // Token was null
+        return false;
       } else {
-        // If the server returns an error, print it
         final errorData = json.decode(response.body);
         print('Login failed: ${errorData['detail']}');
-        return false; // Indicate failure
+        return false;
       }
     } catch (e) {
-      // Handle any other errors, like network issues
       print('An error occurred during login: $e');
       return false;
     }
   }
 
-  // You can add more methods here for other endpoints later!
-  // For example:
-  // Future<List<Event>> getEvents() async { ... }
-  // Future<void> register(User user) async { ... }
+  // ✨ NEW: Method to create an event
+  Future<bool> createEvent(Event newEvent) async {
+    final url = Uri.parse('$_baseUrl/events');
+    final headers = await _getHeaders();
+
+    // The backend expects a JSON object, so we encode our Event object.
+    final body = json.encode(newEvent.toJson());
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      // A status code of 201 means "Created"
+      if (response.statusCode == 201) {
+        print('Event created successfully!');
+        return true;
+      } else {
+        // Handle potential errors (like validation errors or server issues)
+        final errorData = json.decode(response.body);
+        print('Failed to create event: ${errorData['detail']}');
+        return false;
+      }
+    } catch (e) {
+      print('An error occurred while creating the event: $e');
+      return false;
+    }
+  }
 }
