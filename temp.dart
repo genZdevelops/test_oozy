@@ -1,60 +1,116 @@
-// lib/event_model.dart
+// lib/event_card.dart
 
-class Event {
-  // Fields for creating an event
-  final String title;
-  final String date;
-  final String location;
-  final String interestTags;
-  final int groupSize;
-  final String duration;
+import 'package:flutter/material.dart';
+import 'app_colors.dart';
+import 'event_model.dart';
+import 'event_details_screen.dart';
 
-  // Fields received from the backend
-  final int? id;
-  final int? hostId;
-  final String? status;
-  // In the future, you can create a User model and parse this list
-  final List<dynamic>? attendees; 
+class EventCard extends StatefulWidget {
+  final Event event;
 
-  Event({
-    required this.title,
-    required this.date,
-    required this.location,
-    required this.interestTags,
-    required this.groupSize,
-    required this.duration,
-    // These are optional since they don't exist when we first create an event
-    this.id,
-    this.hostId,
-    this.status,
-    this.attendees,
+  const EventCard({
+    super.key,
+    required this.event,
   });
 
-  // ✨ NEW: A factory constructor to create an Event from JSON data
-  factory Event.fromJson(Map<String, dynamic> json) {
-    return Event(
-      id: json['id'],
-      title: json['title'],
-      date: json['date'],
-      location: json['location'],
-      interestTags: json['interest_tags'],
-      groupSize: json['group_size'],
-      duration: json['duration'],
-      hostId: json['host_id'],
-      status: json['status'],
-      attendees: json['attendees'] as List<dynamic>?,
-    );
+  @override
+  State<EventCard> createState() => _EventCardState();
+}
+
+class _EventCardState extends State<EventCard> {
+  bool _isExpanded = false;
+
+  void _toggleExpansion() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
   }
 
-  // Method to convert our Event object into JSON for sending to the backend
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'date': date,
-      'location': location,
-      'interest_tags': interestTags,
-      'group_size': groupSize,
-      'duration': duration,
-    };
+  @override
+  Widget build(BuildContext context) {
+    // ✨ FIXED: Calculate the number of attendees from the attendees list
+    final attendeeCount = widget.event.attendees?.length ?? 0;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryBackground,
+        borderRadius: BorderRadius.circular(16.0),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _toggleExpansion,
+          borderRadius: BorderRadius.circular(16.0),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  widget.event.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                  ),
+                ),
+                if (_isExpanded) ...[
+                  const SizedBox(height: 8),
+                  // ✨ FIXED: Use the correct fields from the Event model
+                  Text(
+                    'Status: ${widget.event.status}\n'
+                    'Location: ${widget.event.location}\n'
+                    'Joined: $attendeeCount / ${widget.event.groupSize}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.primaryText,
+                      height: 1.5, // Adds a bit of space between lines
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EventDetailsScreen(event: widget.event),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryText,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          minimumSize: Size.zero,
+                        ),
+                        child: const Text('Details', style: TextStyle(color: AppColors.background)),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          // TODO: Implement join logic using the ApiService
+                          print('Joined event: ${widget.event.title}');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryText,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          minimumSize: Size.zero,
+                        ),
+                        child: const Text('Join Now', style: TextStyle(color: AppColors.background)),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
