@@ -1,33 +1,40 @@
-// lib/services/api_service.dart
+// lib/user_model.dart
 
-  // ... (keep all the other code like login, createEvent, etc.)
+class UserModel {
+  final String name;
+  final String email;
+  final String password;
+  final String phone;
+  final String interests;
+  final String meetupStyle;
+  final String purpose;
+  final String availability;
+  final String preferredLocations;
 
-  // Method to get the list of all events
-  Future<List<Event>> getEvents() async {
-    final url = Uri.parse('$_baseUrl/events/');
-    
-    // ✨ ADD THESE HEADERS TO PREVENT CACHING
-    final headers = {
-      'Content-Type': 'application/json; charset=UTF-8',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+  UserModel({
+    required this.name,
+    required this.email,
+    required this.password,
+    required this.phone,
+    required this.interests,
+    required this.meetupStyle,
+    required this.purpose,
+    required this.availability,
+    required this.preferredLocations,
+  });
+
+  // Converts the UserModel object into a Map for JSON encoding
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'email': email,
+      'password': password,
+      'phone': phone,
+      'interests': interests,
+      'meetup_style': meetupStyle,
+      'purpose': purpose,
+      'availability': availability,
+      'preferred_locations': preferredLocations,
     };
-
-    try {
-      // Pass the updated headers to the request
-      final response = await http.get(url, headers: headers);
-
-      if (response.statusCode == 200) {
-        final List<dynamic> eventData = json.decode(response.body);
-        return eventData.map((data) => Event.fromJson(data)).toList();
-      } else {
-        final errorData = json.decode(response.body);
-        print('Failed to load events: ${errorData['detail']}');
-        throw Exception('Failed to load events');
-      }
-    } catch (e) {
-      print('An error occurred while fetching events: $e');
-      throw Exception('An error occurred while fetching events');
-    }
   }
+}
